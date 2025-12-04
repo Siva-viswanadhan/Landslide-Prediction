@@ -3,6 +3,11 @@ import pickle
 import numpy as np
 import pandas as pd
 import requests
+import joblib
+import os
+import traceback
+from pathlib import Path
+
 
 # -------------------------------------------------
 # PAGE CONFIG
@@ -10,11 +15,46 @@ import requests
 st.set_page_config(page_title="Landslide Prediction System", layout="wide")
 
 # -------------------------------------------------
-# LOAD MODELS
+# LOAD MODELS (prefer joblib from models_joblib)
 # -------------------------------------------------
-model1 = pickle.load(open("models/landslide_type_model.pkl", "rb"))   # Landslide type
-model2 = pickle.load(open("models/fatality_model.pkl", "rb"))         # Fatality level
-model3 = pickle.load(open("models/rescue_response_model.pkl", "rb"))  # Rescue response
+BASE_DIR = Path(__file__).parent  # folder where app.py is
+MODEL_DIR = BASE_DIR / "models_joblib"
+
+def load_joblib_model(name: str):
+    """
+    Try .joblib first, then .pkl in models_joblib, then fallback to models/*.pkl
+    """
+    candidates = [
+        MODEL_DIR / f"{name}.joblib",
+        MODEL_DIR / f"{name}.pkl",
+        BASE_DIR / "models" / f"{name}.pkl",
+    ]
+    last_exc = None
+    for p in candidates:
+        if p.exists():
+            try:
+                return joblib.load(p)
+            except Exception as e:
+                last_exc = e
+    # No candidate loaded
+    if not MODEL_DIR.exists():
+        raise FileNotFoundError(f"Model directory not found: {MODEL_DIR}")
+    files = os.listdir(MODEL_DIR)
+    raise RuntimeError(f"Could not load model '{name}'. Tried: {candidates}. "
+                       f"Files in {MODEL_DIR}: {files}. Last error: {last_exc}")
+
+try:
+    model1 = load_joblib_model("landslide_type_model")
+    model2 = load_joblib_model("fatality_model")
+    model3 = load_joblib_model("rescue_response_model")
+except Exception as e:
+    st.error("Failed to load ML models. Make sure 'models_joblib' contains .joblib (preferred) or .pkl files.")
+    st.markdown(f"- Expected model directory: `{MODEL_DIR}`")
+    if MODEL_DIR.exists():
+        st.markdown(f"- Files found: {os.listdir(MODEL_DIR)}")
+    st.markdown("**Loader error:**")
+    st.code(traceback.format_exc())
+    st.stop()
 
 # -------------------------------------------------
 # SESSION STATE INITIALIZATION FOR MANUAL INPUTS
