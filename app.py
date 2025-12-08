@@ -8,11 +8,10 @@ import os
 import traceback
 from pathlib import Path
 
-
 # -------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------
-st.set_page_config(page_title="Landslide Prediction System", layout="wide")
+st.set_page_config(page_title="Landslide Impact Prediction System", layout="wide")
 
 # -------------------------------------------------
 # LOAD MODELS (prefer joblib from models_joblib)
@@ -21,9 +20,6 @@ BASE_DIR = Path(__file__).parent  # folder where app.py is
 MODEL_DIR = BASE_DIR / "models_joblib"
 
 def load_joblib_model(name: str):
-    """
-    Try .joblib first, then .pkl in models_joblib, then fallback to models/*.pkl
-    """
     candidates = [
         MODEL_DIR / f"{name}.joblib",
         MODEL_DIR / f"{name}.pkl",
@@ -36,7 +32,6 @@ def load_joblib_model(name: str):
                 return joblib.load(p)
             except Exception as e:
                 last_exc = e
-    # No candidate loaded
     if not MODEL_DIR.exists():
         raise FileNotFoundError(f"Model directory not found: {MODEL_DIR}")
     files = os.listdir(MODEL_DIR)
@@ -52,7 +47,7 @@ except Exception as e:
     st.markdown(f"- Expected model directory: `{MODEL_DIR}`")
     if MODEL_DIR.exists():
         st.markdown(f"- Files found: {os.listdir(MODEL_DIR)}")
-    st.markdown("**Loader error:**")
+    st.markdown("Loader error:")
     st.code(traceback.format_exc())
     st.stop()
 
@@ -74,20 +69,6 @@ if "manual_inputs" not in st.session_state:
     }
 
 # -------------------------------------------------
-# OPTIONAL: STUBS FOR ALERT SENDING (EMAIL/SMS)
-# (Replace with real APIs like SendGrid/Twilio later)
-# -------------------------------------------------
-def send_email_alert(to_email: str, subject: str, message: str):
-    # TODO: integrate real email API (e.g., SendGrid/SMTP)
-    print(f"[SIMULATED EMAIL] To: {to_email}, Subject: {subject}, Message: {message}")
-
-
-def send_sms_alert(to_phone: str, message: str):
-    # TODO: integrate real SMS API (e.g., Twilio)
-    print(f"[SIMULATED SMS] To: {to_phone}, Message: {message}")
-
-
-# -------------------------------------------------
 # SIDEBAR NAVIGATION
 # -------------------------------------------------
 page = st.sidebar.radio(
@@ -95,8 +76,7 @@ page = st.sidebar.radio(
     [
         "Home",
         "Automatic Random Scenario",
-        "Manual Prediction",
-        "Real-time Rainfall & Alerts"
+        "Manual Prediction"
     ]
 )
 
@@ -104,20 +84,18 @@ page = st.sidebar.radio(
 # PAGE 1 — HOME
 # =====================================================================
 if page == "Home":
-    st.title("🏔️ AI-Based Landslide Risk & Response Prediction System")
+    st.title("Landslide Impact Prediction System")
 
     st.markdown("""
-    This project demonstrates a **3-stage machine learning pipeline**:
+    This system predicts:
 
-    1. **Landslide Type Prediction**  
-    2. **Fatality Level Prediction**  
-    3. **Rescue Response Level Recommendation**  
+    1. Landslide Type  
+    2. Fatality Level  
+    3. Rescue Response Level  
 
     It includes:
-    - Automatic random scenario generation (like simulated sensor/API input)  
-    - Manual prediction with auto-filled values from the auto page  
-    - Real-time rainfall monitoring using an external API (via FastAPI)  
-    - Alert simulation via Email/SMS and safer-location suggestion.
+    - Automatic random scenario generation  
+    - Manual prediction with adjustable inputs  
     """)
 
 # =====================================================================
@@ -125,21 +103,18 @@ if page == "Home":
 # =====================================================================
 elif page == "Automatic Random Scenario":
 
-    st.title("🤖 Automatic Random Scenario & Prediction")
+    st.title("Automatic Random Scenario and Prediction")
 
     st.markdown("""
-    This page simulates **automatic sensor/API input** by generating random but realistic values.
-    It predicts:
-    - 🌋 Landslide Type  
-    - 💀 Fatality Level  
-    - 🚑 Rescue Response Level  
+    This feature generates random environmental conditions and produces:
+    - Landslide Type  
+    - Fatality Level  
+    - Rescue Response Level  
 
-    The same random values are also saved and will appear on the **Manual Prediction** page
-    so you can adjust them further.
+    The generated values are also saved so you can adjust them in the Manual Prediction page.
     """)
 
-    if st.button("🎲 Generate Random Scenario & Predict"):
-        # Generate synthetic data
+    if st.button("Generate Random Scenario and Predict"):
         data = {
             "rainfall_mm": float(np.random.uniform(0, 500)),
             "soil_moisture": float(np.random.uniform(0.2, 1.0)),
@@ -148,16 +123,18 @@ elif page == "Automatic Random Scenario":
             "distance_to_river_km": float(np.random.uniform(0.1, 5)),
             "population_density": float(np.random.uniform(50, 2000)),
             "altitude_m": float(np.random.uniform(200, 3500)),
-            "infrastructure_quality": np.random.choice(["Low", "Medium"]),
-            "season": np.random.choice(["Summer", "Winter"]),
+
+            # UPDATED HERE ↓↓↓
+            "infrastructure_quality": np.random.choice(["Low", "Medium", "High"]),
+            "season": np.random.choice(["Summer", "Winter", "Monsoon"]),
+            # UPDATED ↑↑↑
+
             "day_night": np.random.choice(["Day", "Night"]),
         }
 
-        # Show scenario
         st.success("Random scenario generated:")
         st.json(data)
 
-        # ALSO update manual_inputs so page 3 uses same values
         st.session_state.manual_inputs = {
             "rainfall": data["rainfall_mm"],
             "soil_moisture": data["soil_moisture"],
@@ -171,9 +148,7 @@ elif page == "Automatic Random Scenario":
             "day_night": data["day_night"],
         }
 
-        # ---------------------------
-        # MODEL 1 — LANDSLIDE TYPE
-        # ---------------------------
+        # MODEL 1
         m1 = {
             "rainfall_mm": data["rainfall_mm"],
             "soil_moisture": data["soil_moisture"],
@@ -189,14 +164,12 @@ elif page == "Automatic Random Scenario":
 
         df_m1 = pd.DataFrame([m1])[model1.feature_names_in_]
         landslide = model1.predict(df_m1)[0]
-        st.subheader(f"🌋 Predicted Landslide Type: **{landslide}**")
+        st.subheader(f"Landslide Type: {landslide}")
 
         ls_no = 1 if landslide == "No Landslide" else 0
         ls_rock = 1 if landslide == "Rockfall" else 0
 
-        # ---------------------------
-        # MODEL 2 — FATALITY LEVEL
-        # ---------------------------
+        # MODEL 2
         m2 = {
             **m1,
             "population_density": data["population_density"],
@@ -207,26 +180,20 @@ elif page == "Automatic Random Scenario":
 
         df_m2 = pd.DataFrame([m2])[model2.feature_names_in_]
         fatality = model2.predict(df_m2)[0]
-        st.subheader(f"💀 Predicted Fatality Level: **{fatality}**")
+        st.subheader(f"Fatality Level: {fatality}")
 
-        # Casualty estimate (no response)
         death_estimate = {
             "Low": "0–2 possible deaths",
             "Moderate": "3–10 possible deaths",
             "High": "10–50 possible deaths",
             "Severe": "50+ possible deaths"
         }
-        st.error(
-            f"🧍 If **no rescue response** is taken, estimated casualties: "
-            f"**{death_estimate.get(fatality, 'N/A')}**"
-        )
+        st.warning(f"If no rescue response is taken, estimated casualties: {death_estimate.get(fatality)}")
 
         fat_mod = 1 if fatality == "Moderate" else 0
         fat_sev = 1 if fatality == "Severe" else 0
 
-        # ---------------------------
-        # MODEL 3 — RESCUE RESPONSE
-        # ---------------------------
+        # MODEL 3
         m3 = {
             "slope_angle": data["slope_angle"],
             "vegetation_density": data["vegetation_density"],
@@ -244,22 +211,18 @@ elif page == "Automatic Random Scenario":
 
         df_m3 = pd.DataFrame([m3])[model3.feature_names_in_]
         rescue = model3.predict(df_m3)[0]
-        st.subheader(f"🚑 Recommended Rescue Response: **{rescue}**")
+        st.subheader(f"Recommended Rescue Response: {rescue}")
 
 # =====================================================================
-# PAGE 3 — MANUAL PREDICTION (AUTO-FILLED)
+# PAGE 3 — MANUAL PREDICTION
 # =====================================================================
 elif page == "Manual Prediction":
 
-    st.title("🧪 Manual Landslide, Fatality & Rescue Prediction")
+    st.title("Manual Prediction")
 
-    st.markdown("""
-    You can **manually edit** the values here.  
-    When you generate a random scenario on the **Automatic Random Scenario** page,
-    the same values will appear here automatically.
-    """)
+    st.markdown("The values below can be edited. Predictions will be updated based on your inputs.")
 
-    mi = st.session_state.manual_inputs  # shortcut
+    mi = st.session_state.manual_inputs
 
     col1, col2 = st.columns(2)
 
@@ -274,23 +237,25 @@ elif page == "Manual Prediction":
         distance_to_river = st.number_input("Distance to River (km)", value=float(mi["distance_to_river"]))
         population_density = st.number_input("Population Density", value=float(mi["population_density"]))
 
+        # UPDATED HERE ↓↓↓
         infrastructure_quality = st.selectbox(
             "Infrastructure Quality",
-            ["Low", "Medium"],
-            index=["Low", "Medium"].index(mi["infrastructure_quality"])
+            ["Low", "Medium", "High"],
+            index=["Low", "Medium", "High"].index(mi["infrastructure_quality"])
         )
 
         season = st.selectbox(
-            "Season", ["Summer", "Winter"],
-            index=["Summer", "Winter"].index(mi["season"])
+            "Season",
+            ["Summer", "Winter", "Monsoon"],
+            index=["Summer", "Winter", "Monsoon"].index(mi["season"])
         )
+        # UPDATED ↑↑↑
 
         day_night = st.selectbox(
             "Day or Night", ["Day", "Night"],
             index=["Day", "Night"].index(mi["day_night"])
         )
 
-    # Update session state with current manual edits
     st.session_state.manual_inputs = {
         "rainfall": rainfall,
         "soil_moisture": soil_moisture,
@@ -304,9 +269,8 @@ elif page == "Manual Prediction":
         "day_night": day_night,
     }
 
-    if st.button("🔍 Predict (Manual Inputs)"):
-
-        # MODEL 1 — LANDSLIDE TYPE
+    if st.button("Predict"):
+        # MODEL 1
         m1 = {
             "rainfall_mm": rainfall,
             "soil_moisture": soil_moisture,
@@ -322,12 +286,12 @@ elif page == "Manual Prediction":
 
         df_m1 = pd.DataFrame([m1])[model1.feature_names_in_]
         landslide = model1.predict(df_m1)[0]
-        st.success(f"🌋 Landslide Type: {landslide}")
+        st.success(f"Landslide Type: {landslide}")
 
         ls_no = 1 if landslide == "No Landslide" else 0
         ls_rock = 1 if landslide == "Rockfall" else 0
 
-        # MODEL 2 — FATALITY LEVEL
+        # MODEL 2
         m2 = {
             **m1,
             "population_density": population_density,
@@ -338,7 +302,7 @@ elif page == "Manual Prediction":
 
         df_m2 = pd.DataFrame([m2])[model2.feature_names_in_]
         fatality = model2.predict(df_m2)[0]
-        st.warning(f"💀 Fatality Level: {fatality}")
+        st.warning(f"Fatality Level: {fatality}")
 
         death_estimate = {
             "Low": "0–2 possible deaths",
@@ -346,15 +310,12 @@ elif page == "Manual Prediction":
             "High": "10–50 possible deaths",
             "Severe": "50+ possible deaths"
         }
-        st.error(
-            f"🧍 If **no rescue response** is taken, estimated casualties: "
-            f"**{death_estimate.get(fatality, 'N/A')}**"
-        )
+        st.error(f"If no rescue response is taken, estimated casualties: {death_estimate.get(fatality)}")
 
         fat_mod = 1 if fatality == "Moderate" else 0
         fat_sev = 1 if fatality == "Severe" else 0
 
-        # MODEL 3 — RESCUE RESPONSE
+        # MODEL 3
         m3 = {
             "slope_angle": slope_angle,
             "vegetation_density": vegetation_density,
@@ -372,113 +333,4 @@ elif page == "Manual Prediction":
 
         df_m3 = pd.DataFrame([m3])[model3.feature_names_in_]
         rescue = model3.predict(df_m3)[0]
-        st.info(f"🚑 Recommended Rescue Response Level: {rescue}")
-
-# =====================================================================
-# PAGE 4 — REAL-TIME RAINFALL & ALERTS (API)
-# =====================================================================
-elif page == "Real-time Rainfall & Alerts":
-
-    st.title("🌧 Real-time Rainfall Monitoring, Alerts & Safe Place Suggestion")
-
-    st.markdown("""
-    This page connects to a **FastAPI backend** (running separately) that:
-    - Gets live **rainfall**, **temperature**, **humidity**, **altitude**, and **slope angle**  
-      for a given location using external APIs  
-    - Checks if rainfall exceeds a threshold and simulates an **Email/SMS alert**  
-    - Suggests another location with **lower rainfall** as a safer place.
-    """)
-
-    location = st.text_input("Enter location (e.g., Munnar, Kerala)", "Munnar, Kerala")
-
-    if st.button("📡 Get Live Data & Check Risk"):
-        try:
-            api_url = "http://127.0.0.1:8000/get_features"  # Your FastAPI endpoint
-            res = requests.get(api_url, params={"location": location})
-            res.raise_for_status()
-            data = res.json()
-
-            st.success("✅ Live data fetched successfully!")
-            st.write("### 🌍 Environmental Features")
-            st.json(data)
-
-            rainfall = float(data.get("rainfall_mm", 0.0))
-            slope_angle = float(data.get("slope_angle", 0.0))
-
-            st.write(f"**Rainfall (last 1h):** {rainfall:.2f} mm")
-            st.write(f"**Slope Angle (approx):** {slope_angle:.2f}°")
-
-            # ----- Simple alert logic -----
-            if rainfall > 20 and slope_angle > 15:
-                st.error("⚠ High landslide risk based on heavy rainfall and steep slope.")
-                high_risk = True
-            elif rainfall > 10:
-                st.warning("⚠ Moderate risk: rainfall is significant.")
-                high_risk = False
-            else:
-                st.success("✅ Low immediate landslide risk based on current rainfall.")
-                high_risk = False
-
-            # ----- Simulated alert sending via Email/SMS -----
-            if high_risk:
-                st.markdown("---")
-                st.subheader("🚨 Send Alert (Simulated)")
-
-                contact_method = st.selectbox("Choose alert method", ["None", "Email", "SMS"])
-
-                if contact_method == "Email":
-                    to_email = st.text_input("Recipient email", "example@example.com")
-                    if st.button("📧 Send Email Alert"):
-                        send_email_alert(
-                            to_email,
-                            subject="High Landslide Risk Alert",
-                            message=f"High landslide risk detected in {location}. Rainfall={rainfall:.2f} mm, slope={slope_angle:.2f}°"
-                        )
-                        st.success("Simulated email alert sent.")
-
-                elif contact_method == "SMS":
-                    to_phone = st.text_input("Recipient phone number", "+910000000000")
-                    if st.button("📱 Send SMS Alert"):
-                        send_sms_alert(
-                            to_phone,
-                            message=f"High landslide risk in {location}. Rainfall={rainfall:.2f} mm, slope={slope_angle:.2f}°"
-                        )
-                        st.success("Simulated SMS alert sent.")
-
-            # ----- Suggest safer place based on lower rainfall -----
-            st.markdown("---")
-            st.subheader("🧭 Suggesting a Safer Nearby Location (Lower Rainfall)")
-
-            candidate_locations = [
-                "Kochi, Kerala",
-                "Coimbatore, Tamil Nadu",
-                "Bangalore, Karnataka"
-            ]
-
-            safer_place = None
-            min_rain = None
-
-            for loc in candidate_locations:
-                try:
-                    r2 = requests.get(api_url, params={"location": loc})
-                    r2.raise_for_status()
-                    d2 = r2.json()
-                    rfall2 = float(d2.get("rainfall_mm", 0.0))
-
-                    if (min_rain is None) or (rfall2 < min_rain):
-                        min_rain = rfall2
-                        safer_place = (loc, d2)
-                except Exception:
-                    continue
-
-            if safer_place:
-                name, sp_data = safer_place
-                st.success(f"✅ Safer suggestion based on lower current rainfall: **{name}**")
-                st.write(f"Rainfall there: **{min_rain:.2f} mm**, which is lower than in **{location}**.")
-                st.write("You can integrate maps later to visualize this.")
-            else:
-                st.info("Could not find a safer alternative (API error or all places have similar rainfall).")
-
-        except Exception as e:
-            st.error("❌ Could not fetch live data. Make sure the FastAPI backend is running.")
-            st.text(str(e))
+        st.info(f"Recommended Rescue Response Level: {rescue}")
