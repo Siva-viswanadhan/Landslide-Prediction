@@ -16,6 +16,8 @@ langchain-core
 langchain-community
 langchain-text-splitters
 langchain-groq
+langchain-classic
+
 
 # Vector store & embeddings
 faiss-cpu
@@ -24,4 +26,5 @@ ollama
 # Web document loader
 beautifulsoup4
 requests
+
 
