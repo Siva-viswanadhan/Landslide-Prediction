@@ -15,6 +15,7 @@ langchain-classic
 
 # Groq (direct SDK)
 groq
+langchain-groq
 
 # Vector stores
 faiss-cpu
