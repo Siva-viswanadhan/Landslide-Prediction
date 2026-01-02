@@ -135,7 +135,7 @@ elif page == "🏔️ Landslide Prediction":
 
             df2 = pd.DataFrame([m2])[model2.feature_names_in_]
             fatality = model2.predict(df2)[0]
-            st.warning(f"☠️ Fatality Level: **{fatality}**")
+            st.warning(f" Fatality Level: **{fatality}**")
 
             # -------- MODEL 3 --------
             fat_mod = 1 if fatality == "Moderate" else 0
@@ -206,7 +206,7 @@ elif page == "🏔️ Landslide Prediction":
 
             df2 = pd.DataFrame([m2])[model2.feature_names_in_]
             fatality = model2.predict(df2)[0]
-            st.warning(f"☠️ Fatality Level: **{fatality}**")
+            st.warning(f" Fatality Level: **{fatality}**")
 
             fat_mod = 1 if fatality == "Moderate" else 0
             fat_sev = 1 if fatality == "Severe" else 0
