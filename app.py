@@ -235,73 +235,92 @@ elif page == "🏔️ Landslide Prediction":
             st.info(f"🚑 Rescue Response Level: **{rescue}**")
 
 # =====================================================
-# LANDSLIDE KNOWLEDGE CHATBOT
+# LANDSLIDE KNOWLEDGE CHATBOT (CORRECT & STABLE)
 # =====================================================
 elif page == "📚 Landslide Knowledge Chatbot":
     st.title("📚 Landslide Knowledge Chatbot")
 
-    # Get GROQ API key from Streamlit secrets
     groq_api_key = st.secrets.get("GROQ_API_KEY")
     if not groq_api_key:
-        st.error("GROQ_API_KEY not found in Streamlit secrets!")
+        st.error("❌ GROQ_API_KEY not found in Streamlit secrets!")
         st.stop()
 
-    # Load documents & embeddings only once
+    # -------------------------------
+    # Load documents + embeddings ONCE
+    # -------------------------------
     if "vectors" not in st.session_state:
-        with st.spinner("Loading documents & embeddings..."):
+        with st.spinner("Loading knowledge base..."):
             loader = WebBaseLoader(
                 "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/landslide.html"
             )
             docs = loader.load()
+
             splitter = RecursiveCharacterTextSplitter(
                 chunk_size=1000,
                 chunk_overlap=200
             )
             split_docs = splitter.split_documents(docs)
 
-            # Use new langchain_huggingface embeddings
             from langchain_community.embeddings import HuggingFaceEmbeddings
-            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
+            )
 
+            st.session_state.vectors = FAISS.from_documents(
+                split_docs, embeddings
+            )
 
-            st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
-
-    # Initialize Groq LLM
+    # -------------------------------
+    # Groq LLM
+    # -------------------------------
     llm = ChatGroq(
         groq_api_key=groq_api_key,
         model_name="llama-3.1-8b-instant",
         temperature=0.5
     )
 
-    # Prompt template
-    prompt = ChatPromptTemplate.from_template("""
-Answer using only the context below, in a clear and meaningful way.
+    # -------------------------------
+    # Prompt (NEW API expects {input})
+    # -------------------------------
+    prompt = ChatPromptTemplate.from_template(
+        """
+Answer the question using ONLY the context below.
+Be clear and concise.
 
 <context>
 {context}
 </context>
 
-Question: {question}
-""")
+Question: {input}
+"""
+    )
 
-    # Document chain
+    # -------------------------------
+    # Correct Retrieval Chain
+    # -------------------------------
     document_chain = create_stuff_documents_chain(llm, prompt)
     retriever = st.session_state.vectors.as_retriever()
 
-    # Create RetrievalQA chain directly
-    from langchain.chains import RetrievalQA
-    retrieval_chain = RetrievalQA(
-        retriever=retriever,
-        combine_documents_chain=document_chain,
-        input_key="question"  # This is correct for RetrievalQA
+    retrieval_chain = create_retrieval_chain(
+        retriever,
+        document_chain
     )
 
-    # User input
+    # -------------------------------
+    # UI
+    # -------------------------------
     user_input = st.text_input("Ask anything about landslides")
 
     if user_input:
         start = time.process_time()
-        response = retrieval_chain({"question": user_input})
+
+        response = retrieval_chain.invoke(
+            {"input": user_input}
+        )
+
         st.success(response["answer"])
-        st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
+        st.caption(
+            f"⏱️ Response Time: {time.process_time() - start:.2f} seconds"
+        )
+
 
