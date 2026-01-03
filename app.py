@@ -1,4 +1,8 @@
 import streamlit as st
+
+import sys
+
+
 import os
 import time
 import joblib
@@ -13,10 +17,11 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA
-from langchain.prompts import ChatPromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from langchain_core.prompts import ChatPromptTemplate
 
 # -------------------------------
 # App Configuration
@@ -58,7 +63,7 @@ if page == "🏠 Home":
     - LangChain
     - Groq LLM
     - FAISS
-    - HuggingFace Embeddings
+    - Ollama Embeddings
     """)
 
 # =====================================================
@@ -166,7 +171,7 @@ elif page == "🏔️ Landslide Prediction":
         rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, 100.0)
         soil = st.slider("Soil Moisture", 0.0, 1.0, 0.5)
         slope = st.slider("Slope Angle", 0.0, 90.0, 25.0)
-        vegetation = st.slider("Vegetation Density", 0.0, 1.0, 0.4)
+        vegetation = st.slider("Vegetation Density", 0.0, 100.0, 0.4)
         distance = st.number_input("Distance to River (km)", 0.0, 10.0, 1.0)
         population = st.number_input("Population Density", 50.0, 2000.0, 300.0)
         altitude = st.number_input("Altitude (m)", 0.0, 4000.0, 500.0)
@@ -235,11 +240,13 @@ elif page == "🏔️ Landslide Prediction":
 elif page == "📚 Landslide Knowledge Chatbot":
     st.title("📚 Landslide Knowledge Chatbot")
 
-    groq_api_key = os.getenv("GROQ_API_KEY")
+    # Fetch GROQ API key from Streamlit Secrets
+    groq_api_key = st.secrets.get("GROQ_API_KEY")
     if not groq_api_key:
-        st.error("GROQ_API_KEY not found in .env")
+        st.error("GROQ_API_KEY not found in Streamlit secrets!")
         st.stop()
 
+    # Load documents & embeddings only once
     if "vectors" not in st.session_state:
         with st.spinner("Loading documents & embeddings..."):
             loader = WebBaseLoader(
@@ -247,47 +254,50 @@ elif page == "📚 Landslide Knowledge Chatbot":
             )
             docs = loader.load()
             splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000, chunk_overlap=200
+                chunk_size=1000,
+                chunk_overlap=200
             )
-
             split_docs = splitter.split_documents(docs)
 
-            # ✅ Use HuggingFace Embeddings instead of Ollama
-            embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2"
-            )
+            # Use HuggingFace embeddings (avoids Ollama/GROQ embedding issues)
+            from langchain.embeddings import HuggingFaceEmbeddings
+            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
             st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
 
+    # Initialize Groq LLM
     llm = ChatGroq(
         groq_api_key=groq_api_key,
         model_name="llama-3.1-8b-instant",
-        temperature=0.5,
+        temperature=0.5
     )
 
     prompt = ChatPromptTemplate.from_template("""
-    Answer about all and only related from the context below., answer meaningfully
+Answer using only the context below, in a clear and meaningful way.
 
-    <context>
-    {context}
-    </context>
+<context>
+{context}
+</context>
 
-    Question: {input}
-    """)
+Question: {question}
+""")
 
+    # Document chain
+    document_chain = create_stuff_documents_chain(llm, prompt)
     retriever = st.session_state.vectors.as_retriever()
-    retrieval_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        chain_type_kwargs={"prompt": prompt},
+    
+    # Use "question" key for retrieval chain to match the prompt
+    retrieval_chain = create_retrieval_chain(
+        retriever,
+        document_chain,
+        input_key="question"
     )
 
     user_input = st.text_input("Ask anything about landslides")
 
-if user_input:
-    start = time.process_time()
-    # Pass as dictionary with key 'input'
-    response = retrieval_chain.invoke({"input": user_input})
-    st.success(response["answer"])
-    st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
-
+    if user_input:
+        start = time.process_time()
+        # Pass as dict with key "question"
+        response = retrieval_chain({"question": user_input})
+        st.success(response["answer"])
+        st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
