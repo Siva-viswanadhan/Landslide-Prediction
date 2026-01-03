@@ -260,8 +260,9 @@ elif page == "📚 Landslide Knowledge Chatbot":
             split_docs = splitter.split_documents(docs)
 
             # Use new langchain_huggingface embeddings
-            from langchain_huggingface import HuggingFaceEmbeddings
+            from langchain_community.embeddings import HuggingFaceEmbeddings
             embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
 
             st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
 
