@@ -9,7 +9,7 @@ streamlit==1.32.2
 requests
 python-dotenv
 
-# ---------- LangChain (modern only) ----------
+# ---------- LangChain ----------
 langchain>=0.1.16
 langchain-core
 langchain-community
@@ -30,6 +30,6 @@ uvicorn
 sse-starlette
 langserve
 
-# ---------- HARD PINS (IMPORTANT) ----------
+# ---------- UI pins ----------
 rich==13.9.4
 markdown-it-py==3.0.0
