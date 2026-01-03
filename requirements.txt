@@ -1,27 +1,39 @@
 # ------------------------------
 # Core
 # ------------------------------
-python-dotenv>=1.0.1
 streamlit>=1.32.0
+python-dotenv>=1.0.1
 
 # ------------------------------
-# Data & ML
+# Data & ML (Python 3.13 wheels)
 # ------------------------------
-numpy>=1.26,<2.0
-pandas>=2.0,<3.0
+numpy>=1.26.4,<2.0
+pandas>=2.3.0,<3.0
 scikit-learn==1.6.1
 joblib>=1.4.2
 
 # ------------------------------
-# Web & Parsing
+# Web
 # ------------------------------
-requests>=2.31.0
+requests>=2.32.0
 beautifulsoup4>=4.12.3
 
 # ------------------------------
-# LangChain (Python 3.13 SAFE)
+# LangChain (Runnable API only)
 # ------------------------------
-langchain>=0.2.14,<0.3.0
-langchain-core>=0.2.36,<0.3.0
-langchain-community>=0.2.12,<0.3.0
-langchain-text-splitt
+langchain>=0.2.17,<0.3.0
+langchain-core>=0.2.43,<0.3.0
+langchain-community>=0.2.19,<0.3.0
+langchain-text-splitters>=0.2.4,<0.3.0
+langchain-groq>=0.1.5
+
+# ------------------------------
+# Vector Store & Embeddings
+# ------------------------------
+sentence-transformers>=2.2.2,<3.0
+faiss-cpu>=1.8.0,<2.0
+
+# ------------------------------
+# Groq SDK (safe)
+# ------------------------------
+groq>=0.9.0
