@@ -9,10 +9,10 @@ streamlit==1.32.2
 requests
 python-dotenv
 
-# ---------- LangChain (MODERN ONLY) ----------
+# ---------- LangChain (modern only) ----------
 langchain>=0.1.16
-langchain-community
 langchain-core
+langchain-community
 langchain-text-splitters
 langchain-groq
 
@@ -21,7 +21,7 @@ faiss-cpu
 ollama
 groq
 
-# ---------- Document loaders ----------
+# ---------- Docs ----------
 beautifulsoup4
 
 # ---------- API ----------
@@ -29,3 +29,7 @@ fastapi
 uvicorn
 sse-starlette
 langserve
+
+# ---------- HARD PINS (IMPORTANT) ----------
+rich==13.9.4
+markdown-it-py==3.0.0
