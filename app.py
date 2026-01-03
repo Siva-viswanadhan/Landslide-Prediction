@@ -262,7 +262,7 @@ elif page == "📚 Landslide Knowledge Chatbot":
     )
 
     prompt = ChatPromptTemplate.from_template("""
-    Answer using ONLY the context below.
+    Answer about all and only related from the context below., answer meaninfully
 
     <context>
     {context}
