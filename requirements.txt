@@ -16,6 +16,6 @@ groq
 
 beautifulsoup4
 
-# Added for HuggingFace embeddings
-sentence-transformers==2.2.2
-faiss-cpu==1.7.4
+# HuggingFace embeddings (compatible with Python 3.10+)
+sentence-transformers>=2.2.2,<3.0
+faiss-cpu>=1.13.2,<2.0
