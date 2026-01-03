@@ -1,37 +1,31 @@
-# Core ML
-pandas>=2.0.3,<3.0
-numpy>=1.24.0,<2.0
-scikit-learn==1.6.1
-joblib>=1.3.0,<2.0
+# ---------- Core ML ----------
+pandas>=2.0,<3.0
+numpy>=1.24,<2.0
+scikit-learn>=1.3,<1.5
+joblib>=1.3,<2.0
 
-# App
-streamlit>=1.25,<2.0
-python-dotenv
+# ---------- App ----------
+streamlit==1.32.2
 requests
+python-dotenv
 
-# LangChain (classic chains + auto-resolve dependencies)
-langchain
-langchain-classic
-langchain-core
+# ---------- LangChain (MODERN ONLY) ----------
+langchain>=0.1.16
 langchain-community
+langchain-core
 langchain-text-splitters
-
-# Groq (direct SDK)
-groq
 langchain-groq
 
-# Vector stores
+# ---------- LLM / Vector ----------
 faiss-cpu
 ollama
+groq
 
-# Document loaders
+# ---------- Document loaders ----------
 beautifulsoup4
 
-# App / APIs
+# ---------- API ----------
 fastapi
 uvicorn
 sse-starlette
 langserve
-
-# Utilities
-python-dotenv
