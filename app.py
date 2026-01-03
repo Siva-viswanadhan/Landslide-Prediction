@@ -284,8 +284,10 @@ elif page == "📚 Landslide Knowledge Chatbot":
 
     user_input = st.text_input("Ask anything about landslides")
 
-    if user_input:
-        start = time.process_time()
-        response = retrieval_chain.run(user_input)
-        st.success(response)
-        st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
+if user_input:
+    start = time.process_time()
+    # Pass as dictionary with key 'input'
+    response = retrieval_chain.invoke({"input": user_input})
+    st.success(response["answer"])
+    st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
+
