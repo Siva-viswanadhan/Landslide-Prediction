@@ -1,8 +1,4 @@
 import streamlit as st
-
-import sys
-
-
 import os
 import time
 import joblib
@@ -17,11 +13,10 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains import RetrievalQA
+from langchain.prompts import ChatPromptTemplate
 
 # -------------------------------
 # App Configuration
@@ -63,7 +58,7 @@ if page == "🏠 Home":
     - LangChain
     - Groq LLM
     - FAISS
-    - Ollama Embeddings
+    - HuggingFace Embeddings
     """)
 
 # =====================================================
@@ -171,7 +166,7 @@ elif page == "🏔️ Landslide Prediction":
         rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, 100.0)
         soil = st.slider("Soil Moisture", 0.0, 1.0, 0.5)
         slope = st.slider("Slope Angle", 0.0, 90.0, 25.0)
-        vegetation = st.slider("Vegetation Density", 0.0, 100.0, 0.4)
+        vegetation = st.slider("Vegetation Density", 0.0, 1.0, 0.4)
         distance = st.number_input("Distance to River (km)", 0.0, 10.0, 1.0)
         population = st.number_input("Population Density", 50.0, 2000.0, 300.0)
         altitude = st.number_input("Altitude (m)", 0.0, 4000.0, 500.0)
@@ -242,7 +237,7 @@ elif page == "📚 Landslide Knowledge Chatbot":
 
     groq_api_key = os.getenv("GROQ_API_KEY")
     if not groq_api_key:
-        st.error(" GROQ_API_KEY not found in .env")
+        st.error("GROQ_API_KEY not found in .env")
         st.stop()
 
     if "vectors" not in st.session_state:
@@ -252,21 +247,25 @@ elif page == "📚 Landslide Knowledge Chatbot":
             )
             docs = loader.load()
             splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,chunk_overlap=200)
+                chunk_size=1000, chunk_overlap=200
+            )
 
             split_docs = splitter.split_documents(docs)
 
-            embeddings = OllamaEmbeddings()
+            # ✅ Use HuggingFace Embeddings instead of Ollama
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
+            )
             st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
 
     llm = ChatGroq(
         groq_api_key=groq_api_key,
         model_name="llama-3.1-8b-instant",
-        temperature=0.5
+        temperature=0.5,
     )
 
     prompt = ChatPromptTemplate.from_template("""
-    Answer about all and only related from the context below., answer meaninfully
+    Answer about all and only related from the context below., answer meaningfully
 
     <context>
     {context}
@@ -275,14 +274,18 @@ elif page == "📚 Landslide Knowledge Chatbot":
     Question: {input}
     """)
 
-    document_chain = create_stuff_documents_chain(llm, prompt)
     retriever = st.session_state.vectors.as_retriever()
-    retrieval_chain = create_retrieval_chain(retriever, document_chain)
+    retrieval_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=retriever,
+        chain_type_kwargs={"prompt": prompt},
+    )
 
     user_input = st.text_input("Ask anything about landslides")
 
     if user_input:
         start = time.process_time()
-        response = retrieval_chain.invoke({"input": user_input})
-        st.success(response["answer"])
+        response = retrieval_chain.run(user_input)
+        st.success(response)
         st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
