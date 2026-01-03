@@ -284,8 +284,13 @@ elif page == "📚 Landslide Knowledge Chatbot":
     # -------------------------------
     prompt = ChatPromptTemplate.from_template(
         """
-Answer the question using ONLY the context below.
-Be clear and concise.
+Answer the user's question using the context below and include a small explanation.
+
+Rules:
+- First, try to answer using the provided context.
+- If the context does not fully answer the question, use your general knowledge to give a related and helpful answer.
+- Clearly indicate when the answer is based on general knowledge.
+- Keep the explanation simple and clear.
 
 <context>
 {context}
