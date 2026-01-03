@@ -240,7 +240,7 @@ elif page == "🏔️ Landslide Prediction":
 elif page == "📚 Landslide Knowledge Chatbot":
     st.title("📚 Landslide Knowledge Chatbot")
 
-    # Fetch GROQ API key from Streamlit Secrets
+    # Get GROQ API key from Streamlit secrets
     groq_api_key = st.secrets.get("GROQ_API_KEY")
     if not groq_api_key:
         st.error("GROQ_API_KEY not found in Streamlit secrets!")
@@ -259,8 +259,8 @@ elif page == "📚 Landslide Knowledge Chatbot":
             )
             split_docs = splitter.split_documents(docs)
 
-            # Use HuggingFace embeddings (avoids Ollama/GROQ embedding issues)
-            from langchain.embeddings import HuggingFaceEmbeddings
+            # Use new langchain_huggingface embeddings
+            from langchain_huggingface import HuggingFaceEmbeddings
             embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
             st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
@@ -272,6 +272,7 @@ elif page == "📚 Landslide Knowledge Chatbot":
         temperature=0.5
     )
 
+    # Prompt template
     prompt = ChatPromptTemplate.from_template("""
 Answer using only the context below, in a clear and meaningful way.
 
@@ -285,19 +286,21 @@ Question: {question}
     # Document chain
     document_chain = create_stuff_documents_chain(llm, prompt)
     retriever = st.session_state.vectors.as_retriever()
-    
-    # Use "question" key for retrieval chain to match the prompt
-    retrieval_chain = create_retrieval_chain(
-        retriever,
-        document_chain,
-        input_key="question"
+
+    # Create RetrievalQA chain directly
+    from langchain.chains import RetrievalQA
+    retrieval_chain = RetrievalQA(
+        retriever=retriever,
+        combine_documents_chain=document_chain,
+        input_key="question"  # This is correct for RetrievalQA
     )
 
+    # User input
     user_input = st.text_input("Ask anything about landslides")
 
     if user_input:
         start = time.process_time()
-        # Pass as dict with key "question"
         response = retrieval_chain({"question": user_input})
         st.success(response["answer"])
         st.caption(f"⏱️ Response Time: {time.process_time() - start:.2f} seconds")
+
