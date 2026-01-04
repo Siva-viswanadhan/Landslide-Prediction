@@ -7,10 +7,11 @@ import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 
-# LangChain Imports
+# LangChain imports
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
@@ -89,11 +90,9 @@ elif page == "Landslide Prediction":
             }
 
             st.write("Generated Input Values:", data)
+            st.session_state.last_random = data.copy()  # save for manual input
 
-            # Save generated values to session_state for manual input
-            st.session_state.last_random = data.copy()
-
-            # Model 1: Landslide Type
+            # Landslide Type
             m1 = {
                 "rainfall_mm": data["rainfall_mm"],
                 "soil_moisture": data["soil_moisture"],
@@ -110,7 +109,7 @@ elif page == "Landslide Prediction":
             landslide = model1.predict(df1)[0]
             st.write("Predicted Landslide Type:", landslide)
 
-            # Model 2: Fatality Level
+            # Fatality Level
             ls_no = 1 if landslide == "No Landslide" else 0
             ls_rock = 1 if landslide == "Rockfall" else 0
             m2 = {**m1,
@@ -123,7 +122,7 @@ elif page == "Landslide Prediction":
             fatality = model2.predict(df2)[0]
             st.write("Predicted Fatality Level:", fatality)
 
-            # Model 3: Rescue Response Level
+            # Rescue Response
             fat_mod = 1 if fatality == "Moderate" else 0
             fat_sev = 1 if fatality == "Severe" else 0
             m3 = {
@@ -145,7 +144,6 @@ elif page == "Landslide Prediction":
             st.write("Predicted Rescue Response Level:", rescue)
 
     else:  # Manual input
-        # Pre-fill manual inputs from last random scenario
         last = st.session_state.last_random
         rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, float(last.get("rainfall_mm", 100)))
         soil = st.number_input("Soil Moisture", 0.0, 1.0, float(last.get("soil_moisture", 0.5)))
@@ -154,9 +152,9 @@ elif page == "Landslide Prediction":
         distance = st.number_input("Distance to River (km)", 0.0, 10.0, float(last.get("distance_to_river_km", 1)))
         population = st.number_input("Population Density", 50.0, 2000.0, float(last.get("population_density", 300)))
         altitude = st.number_input("Altitude (m)", 0.0, 4000.0, float(last.get("altitude_m", 500)))
-        infra = st.selectbox("Infrastructure Quality", ["Low", "Medium", "High"], index=["Low", "Medium", "High"].index(last.get("infrastructure_quality", "Medium")))
-        season = st.selectbox("Season", ["Summer", "Winter", "Monsoon"], index=["Summer", "Winter", "Monsoon"].index(last.get("season", "Summer")))
-        day_night = st.selectbox("Day / Night", ["Day", "Night"], index=["Day", "Night"].index(last.get("day_night", "Day")))
+        infra = st.selectbox("Infrastructure Quality", ["Low", "Medium", "High"], index=["Low","Medium","High"].index(last.get("infrastructure_quality","Medium")))
+        season = st.selectbox("Season", ["Summer", "Winter", "Monsoon"], index=["Summer","Winter","Monsoon"].index(last.get("season","Summer")))
+        day_night = st.selectbox("Day / Night", ["Day", "Night"], index=["Day","Night"].index(last.get("day_night","Day")))
 
         if st.button("Predict"):
             m1 = {
@@ -206,3 +204,67 @@ elif page == "Landslide Prediction":
             df3 = pd.DataFrame([m3])[model3.feature_names_in_]
             rescue = model3.predict(df3)[0]
             st.write("Predicted Rescue Response Level:", rescue)
+
+# =====================================================
+# LANDSLIDE KNOWLEDGE CHATBOT
+# =====================================================
+elif page == "Landslide Knowledge Chatbot":
+    st.title("Landslide Knowledge Chatbot")
+
+    groq_api_key = st.secrets.get("GROQ_API_KEY")
+    if not groq_api_key:
+        st.error("GROQ_API_KEY not found in Streamlit secrets!")
+        st.stop()
+
+    if "vectors" not in st.session_state:
+        with st.spinner("Loading knowledge base..."):
+            loader = WebBaseLoader(
+                "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/landslide.html"
+            )
+            docs = loader.load()
+
+            splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200
+            )
+            split_docs = splitter.split_documents(docs)
+
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
+            )
+
+            st.session_state.vectors = FAISS.from_documents(
+                split_docs, embeddings
+            )
+
+    llm = ChatGroq(
+        groq_api_key=groq_api_key,
+        model_name="llama-3.1-8b-instant",
+        temperature=0.5
+    )
+
+    prompt = ChatPromptTemplate.from_template("""
+Answer the user's question only about landslides (causes, impacts, prevention, triggers, rescue, ML factors).
+Use context if available. If not, give a short answer based on general landslide knowledge.
+If the question is unrelated, respond with: 'You are asking about something outside landslides; here is a brief related answer.'
+
+<context>
+{context}
+</context>
+
+Question: {input}
+""")
+
+    document_chain = create_stuff_documents_chain(llm, prompt)
+    retriever = st.session_state.vectors.as_retriever()
+    retrieval_chain = create_retrieval_chain(
+        retriever,
+        document_chain
+    )
+
+    user_input = st.text_input("Ask anything about landslides")
+    if user_input:
+        start = time.process_time()
+        response = retrieval_chain.invoke({"input": user_input})
+        st.write(response["answer"])
+        st.caption(f"Response Time: {time.process_time() - start:.2f} seconds")
