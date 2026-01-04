@@ -66,6 +66,10 @@ elif page == "Landslide Prediction":
     model2 = load_model("fatality_model")
     model3 = load_model("rescue_response_model")
 
+    # Initialize session_state for last random scenario
+    if "last_random" not in st.session_state:
+        st.session_state.last_random = {}
+
     mode = st.radio("Choose Prediction Mode", ["Manual Input", "Random Scenario"])
 
     if mode == "Random Scenario":
@@ -85,6 +89,9 @@ elif page == "Landslide Prediction":
             }
 
             st.write("Generated Input Values:", data)
+
+            # Save generated values to session_state for manual input
+            st.session_state.last_random = data.copy()
 
             # Model 1: Landslide Type
             m1 = {
@@ -138,17 +145,18 @@ elif page == "Landslide Prediction":
             st.write("Predicted Rescue Response Level:", rescue)
 
     else:  # Manual input
-        # Input fields
-        rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, 100.0)
-        soil = st.slider("Soil Moisture", 0.0, 1.0, 0.5)
-        slope = st.slider("Slope Angle", 0.0, 90.0, 25.0)
-        vegetation = st.slider("Vegetation Density", 0.0, 1.0, 0.4)
-        distance = st.number_input("Distance to River (km)", 0.0, 10.0, 1.0)
-        population = st.number_input("Population Density", 50.0, 2000.0, 300.0)
-        altitude = st.number_input("Altitude (m)", 0.0, 4000.0, 500.0)
-        infra = st.selectbox("Infrastructure Quality", ["Low", "Medium", "High"])
-        season = st.selectbox("Season", ["Summer", "Winter", "Monsoon"])
-        day_night = st.selectbox("Day / Night", ["Day", "Night"])
+        # Pre-fill manual inputs from last random scenario
+        last = st.session_state.last_random
+        rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, float(last.get("rainfall_mm", 100)))
+        soil = st.number_input("Soil Moisture", 0.0, 1.0, float(last.get("soil_moisture", 0.5)))
+        slope = st.number_input("Slope Angle", 0.0, 90.0, float(last.get("slope_angle", 25)))
+        vegetation = st.number_input("Vegetation Density", 0.0, 1.0, float(last.get("vegetation_density", 0.4)))
+        distance = st.number_input("Distance to River (km)", 0.0, 10.0, float(last.get("distance_to_river_km", 1)))
+        population = st.number_input("Population Density", 50.0, 2000.0, float(last.get("population_density", 300)))
+        altitude = st.number_input("Altitude (m)", 0.0, 4000.0, float(last.get("altitude_m", 500)))
+        infra = st.selectbox("Infrastructure Quality", ["Low", "Medium", "High"], index=["Low", "Medium", "High"].index(last.get("infrastructure_quality", "Medium")))
+        season = st.selectbox("Season", ["Summer", "Winter", "Monsoon"], index=["Summer", "Winter", "Monsoon"].index(last.get("season", "Summer")))
+        day_night = st.selectbox("Day / Night", ["Day", "Night"], index=["Day", "Night"].index(last.get("day_night", "Day")))
 
         if st.button("Predict"):
             m1 = {
@@ -198,56 +206,3 @@ elif page == "Landslide Prediction":
             df3 = pd.DataFrame([m3])[model3.feature_names_in_]
             rescue = model3.predict(df3)[0]
             st.write("Predicted Rescue Response Level:", rescue)
-
-# =====================================================
-# LANDSLIDE KNOWLEDGE CHATBOT
-# =====================================================
-elif page == "Landslide Knowledge Chatbot":
-    st.title("Landslide Knowledge Chatbot")
-
-    groq_api_key = st.secrets.get("GROQ_API_KEY")
-    if not groq_api_key:
-        st.error("GROQ_API_KEY not found in Streamlit secrets.")
-        st.stop()
-
-    if "vectors" not in st.session_state:
-        with st.spinner("Loading knowledge base..."):
-            loader = WebBaseLoader(
-                "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/landslide.html"
-            )
-            docs = loader.load()
-            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-            split_docs = splitter.split_documents(docs)
-
-            from langchain_community.embeddings import HuggingFaceEmbeddings
-            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-            st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
-
-    llm = ChatGroq(groq_api_key=groq_api_key, model_name="llama-3.1-8b-instant", temperature=0.5)
-
-    prompt = ChatPromptTemplate.from_template("""
-Answer the user's question ONLY about landslides or related topics.
-
-Rules:
-- Use context first. If context does not fully answer, use general landslide knowledge.
-- Do NOT answer unrelated questions. If question is unrelated, give a short note.
-- Keep explanation simple and concise.
-
-<context>
-{context}
-</context>
-
-Question: {input}
-""")
-
-    document_chain = create_stuff_documents_chain(llm, prompt)
-    retriever = st.session_state.vectors.as_retriever()
-    retrieval_chain = create_retrieval_chain(retriever, document_chain)
-
-    user_input = st.text_input("Ask anything about landslides")
-    if user_input:
-        start = time.process_time()
-        response = retrieval_chain.invoke({"input": user_input})
-        st.write(response["answer"])
-        st.caption(f"Response Time: {time.process_time() - start:.2f} seconds")
