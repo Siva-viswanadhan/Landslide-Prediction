@@ -284,13 +284,18 @@ elif page == "📚 Landslide Knowledge Chatbot":
     # -------------------------------
     prompt = ChatPromptTemplate.from_template(
         """
-Answer the user's question using the context below and include a small explanation.
+ Answer the user's question using the context below and include a short explanation.
 
-Rules:
-- First, try to answer using the provided context.
-- If the context does not fully answer the question, use your general knowledge to give a related and helpful answer.
-- Clearly indicate when the answer is based on general knowledge.
-- Keep the explanation simple and clear.
+ Rules:
+ - Answer ONLY questions related to landslides or closely related topics
+  (such as causes, triggers, warning signs, impacts, prevention, mitigation, or response)
+  and anything related to landslide like factors affecting landslide , or the things consider while doing ml project.
+ - First, try to answer using the provided context.
+ - If the context does not fully answer the question, use your general knowledge
+   related to landslides only.
+ - Clearly indicate when the answer is based on general knowledge.
+ - Do NOT answer unrelated topics.
+ - Keep the explanation simple and clear and explain a bit.
 
 <context>
 {context}
