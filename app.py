@@ -1,8 +1,4 @@
 import streamlit as st
-
-import sys
-
-
 import os
 import time
 import joblib
@@ -11,64 +7,47 @@ import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 
-# -------------------------------
-# LangChain Imports
-# -------------------------------
+# Environment setup
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+load_dotenv()
+
+# LangChain imports
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
-# -------------------------------
-# App Configuration
-# -------------------------------
+# Streamlit config
 st.set_page_config(page_title="Landslide Prediction System", layout="wide")
-load_dotenv()
 
-# -------------------------------
-# Sidebar Navigation
-# -------------------------------
+# Sidebar
 st.sidebar.title("Navigation")
 page = st.sidebar.radio(
     "Select Module",
-    [" Home", " Landslide Prediction", " Landslide Knowledge Chatbot"]
+    ["Home", "Landslide Prediction", "Landslide Knowledge Chatbot"]
 )
 
-# =====================================================
-# HOME PAGE
-# =====================================================
+# Home
 if page == "Home":
     st.title("Landslide Intelligence System")
-
     st.markdown("""
-    ### Modules Included
+    ### Modules
+    - Landslide Prediction
+    - Landslide Knowledge Chatbot
 
-    **Landslide Prediction**
-    - Predicts Landslide Type
-    - Predicts Fatality Level
-    - Predicts Rescue Response Level
-
-    **Landslide Knowledge Chatbot**
-    - Ask questions about landslides
-    - Uses real web content (RAG)
-    - Powered by Groq LLM
-
-    ### Technologies Used
+    ### Technologies
     - Streamlit
     - Scikit-learn
     - LangChain
     - Groq LLM
     - FAISS
-    - Ollama Embeddings
     """)
 
-# =====================================================
-# LANDSLIDE PREDICTION
-# =====================================================
+# Landslide Prediction
 elif page == "Landslide Prediction":
     st.title("Landslide Impact Prediction")
 
@@ -89,9 +68,6 @@ elif page == "Landslide Prediction":
 
     mode = st.radio("Choose Prediction Mode", ["Manual Input", "Random Scenario"])
 
-    # -------------------------------
-    # RANDOM SCENARIO
-    # -------------------------------
     if mode == "Random Scenario":
         if st.button("Generate & Predict"):
             data = {
@@ -107,7 +83,6 @@ elif page == "Landslide Prediction":
                 "day_night": np.random.choice(["Day", "Night"]),
             }
 
-            # -------- MODEL 1 --------
             m1 = {
                 "rainfall_mm": data["rainfall_mm"],
                 "soil_moisture": data["soil_moisture"],
@@ -123,9 +98,8 @@ elif page == "Landslide Prediction":
 
             df1 = pd.DataFrame([m1])[model1.feature_names_in_]
             landslide = model1.predict(df1)[0]
-            st.success(f"🌋 Landslide Type: **{landslide}**")
+            st.success(f"Landslide Type: {landslide}")
 
-            # -------- MODEL 2 --------
             ls_no = 1 if landslide == "No Landslide" else 0
             ls_rock = 1 if landslide == "Rockfall" else 0
 
@@ -139,9 +113,8 @@ elif page == "Landslide Prediction":
 
             df2 = pd.DataFrame([m2])[model2.feature_names_in_]
             fatality = model2.predict(df2)[0]
-            st.warning(f" Fatality Level: **{fatality}**")
+            st.warning(f"Fatality Level: {fatality}")
 
-            # -------- MODEL 3 --------
             fat_mod = 1 if fatality == "Moderate" else 0
             fat_sev = 1 if fatality == "Severe" else 0
 
@@ -162,140 +135,49 @@ elif page == "Landslide Prediction":
 
             df3 = pd.DataFrame([m3])[model3.feature_names_in_]
             rescue = model3.predict(df3)[0]
-            st.info(f"Rescue Response Level: **{rescue}**")
+            st.info(f"Rescue Response Level: {rescue}")
 
-    # -------------------------------
-    # MANUAL INPUT
-    # -------------------------------
-    else:
-        rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, 100.0)
-        soil = st.slider("Soil Moisture", 0.0, 1.0, 0.5)
-        slope = st.slider("Slope Angle", 0.0, 90.0, 25.0)
-        vegetation = st.slider("Vegetation Density", 0.0, 100.0, 0.4)
-        distance = st.number_input("Distance to River (km)", 0.0, 10.0, 1.0)
-        population = st.number_input("Population Density", 50.0, 2000.0, 300.0)
-        altitude = st.number_input("Altitude (m)", 0.0, 4000.0, 500.0)
-        infra = st.selectbox("Infrastructure Quality", ["Low", "Medium", "High"])
-        season = st.selectbox("Season", ["Summer", "Winter", "Monsoon"])
-        day_night = st.selectbox("Day / Night", ["Day", "Night"])
-
-        if st.button("Predict"):
-            m1 = {
-                "rainfall_mm": rainfall,
-                "soil_moisture": soil,
-                "slope_angle": slope,
-                "vegetation_density": vegetation,
-                "distance_to_river_km": distance,
-                "altitude_m": altitude,
-                "infrastructure_quality_Low": 1 if infra == "Low" else 0,
-                "infrastructure_quality_Medium": 1 if infra == "Medium" else 0,
-                "season_Summer": 1 if season == "Summer" else 0,
-                "season_Winter": 1 if season == "Winter" else 0,
-            }
-
-            df1 = pd.DataFrame([m1])[model1.feature_names_in_]
-            landslide = model1.predict(df1)[0]
-            st.success(f"🌋 Landslide Type: **{landslide}**")
-
-            ls_no = 1 if landslide == "No Landslide" else 0
-            ls_rock = 1 if landslide == "Rockfall" else 0
-
-            m2 = {
-                **m1,
-                "population_density": population,
-                "day_night_Night": 1 if day_night == "Night" else 0,
-                "landslide_type_No Landslide": ls_no,
-                "landslide_type_Rockfall": ls_rock,
-            }
-
-            df2 = pd.DataFrame([m2])[model2.feature_names_in_]
-            fatality = model2.predict(df2)[0]
-            st.warning(f" Fatality Level: **{fatality}**")
-
-            fat_mod = 1 if fatality == "Moderate" else 0
-            fat_sev = 1 if fatality == "Severe" else 0
-
-            m3 = {
-                "slope_angle": slope,
-                "vegetation_density": vegetation,
-                "distance_to_river_km": distance,
-                "population_density": population,
-                "altitude_m": altitude,
-                "infrastructure_quality_Low": m1["infrastructure_quality_Low"],
-                "infrastructure_quality_Medium": m1["infrastructure_quality_Medium"],
-                "day_night_Night": m2["day_night_Night"],
-                "landslide_type_No Landslide": ls_no,
-                "landslide_type_Rockfall": ls_rock,
-                "fatality_level_Moderate": fat_mod,
-                "fatality_level_Severe": fat_sev,
-            }
-
-            df3 = pd.DataFrame([m3])[model3.feature_names_in_]
-            rescue = model3.predict(df3)[0]
-            st.info(f"🚑 Rescue Response Level: **{rescue}**")
-
-# =====================================================
-# LANDSLIDE KNOWLEDGE CHATBOT (CORRECT & STABLE)
-# =====================================================
+# Chatbot
 elif page == "Landslide Knowledge Chatbot":
     st.title("Landslide Knowledge Chatbot")
 
     groq_api_key = st.secrets.get("GROQ_API_KEY")
     if not groq_api_key:
-        st.error("GROQ_API_KEY not found in Streamlit secrets!")
+        st.error("GROQ_API_KEY not found")
         st.stop()
 
-    # -------------------------------
-    # Load documents + embeddings ONCE
-    # -------------------------------
     if "vectors" not in st.session_state:
-        with st.spinner("Loading knowledge base..."):
+        with st.spinner("Loading knowledge base"):
             loader = WebBaseLoader(
                 "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/landslide.html"
             )
             docs = loader.load()
 
-            splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200
-            )
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
             split_docs = splitter.split_documents(docs)
 
-            from langchain_community.embeddings import HuggingFaceEmbeddings
             embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/all-MiniLM-L6-v2"
             )
 
-            st.session_state.vectors = FAISS.from_documents(
-                split_docs, embeddings
-            )
+            st.session_state.vectors = FAISS.from_documents(split_docs, embeddings)
 
-    # -------------------------------
-    # Groq LLM
-    # -------------------------------
     llm = ChatGroq(
         groq_api_key=groq_api_key,
         model_name="llama-3.1-8b-instant",
         temperature=0.5
     )
 
-    # -------------------------------
-    # Prompt (NEW API expects {input})
-    # -------------------------------
     prompt = ChatPromptTemplate.from_template(
         """
- Answer the user's question using the context below and include a short explanation.
+Answer the user's question using the context below.
 
- Rules:
- - Answer ONLY questions related to landslides or closely related topics
-  (such as causes, triggers, warning signs, impacts, prevention, mitigation, or response)
-  and anything related to landslide like factors affecting landslide , or the things consider while doing ml project.
- - First, try to answer using the provided context.
- - If the context does not fully answer the question, use your general knowledge
-   related to landslides only.
- - Clearly indicate when the answer is based on general knowledge.
- - Do NOT answer unrelated topics.
- - Keep the explanation simple and clear and explain a bit.
+Rules:
+- Answer landslide-related questions and its related.
+- Use context first.
+- If context is insufficient, use general landslide knowledge only.
+- Clearly mention when using general knowledge.
+- Do not answer unrelated topics.
 
 <context>
 {context}
@@ -305,32 +187,12 @@ Question: {input}
 """
     )
 
-    # -------------------------------
-    # Correct Retrieval Chain
-    # -------------------------------
     document_chain = create_stuff_documents_chain(llm, prompt)
     retriever = st.session_state.vectors.as_retriever()
+    retrieval_chain = create_retrieval_chain(retriever, document_chain)
 
-    retrieval_chain = create_retrieval_chain(
-        retriever,
-        document_chain
-    )
-
-    # -------------------------------
-    # UI
-    # -------------------------------
-    user_input = st.text_input("Ask anything about landslides")
+    user_input = st.text_input("Ask a landslide-related question")
 
     if user_input:
-        start = time.process_time()
-
-        response = retrieval_chain.invoke(
-            {"input": user_input}
-        )
-
-        st.success(response["answer"])
-        st.caption(
-            f"Response Time: {time.process_time() - start:.2f} seconds"
-        )
-
-
+        response = retrieval_chain.invoke({"input": user_input})
+        st.success(response.get("answer", "No relevant information found"))
