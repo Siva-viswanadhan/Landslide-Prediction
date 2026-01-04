@@ -35,17 +35,34 @@ page = st.sidebar.radio(
 if page == "Home":
     st.title("Landslide Intelligence System")
     st.markdown("""
-    ### Modules
-    - Landslide Prediction
-    - Landslide Knowledge Chatbot
+### Landslide Prediction System
 
-    ### Technologies
-    - Streamlit
-    - Scikit-learn
-    - LangChain
-    - Groq LLM
-    - FAISS
-    """)
+This project is a simple and practical landslide prediction system built using machine learning and AI to support disaster analysis and awareness.
+
+The system predicts three important outcomes:
+Landslide type  
+Fatality level  
+Rescue response level  
+
+A Random Forest model is used to make predictions based on factors such as rainfall, soil moisture, slope angle, vegetation density, population density, altitude, and infrastructure quality.
+
+Along with prediction, the project includes a Landslide Knowledge Chatbot. This chatbot allows users to ask questions related to landslides and provides clear, relevant answers using trusted information sources and AI-based retrieval.
+
+### Modules
+Landslide Prediction  
+Landslide Knowledge Chatbot  
+
+### Technologies Used
+Streamlit  
+Scikit-learn  
+Pandas and NumPy  
+LangChain  
+FAISS  
+Groq LLM  
+
+This project focuses on applying machine learning to real-world disaster management problems in a clear and easy-to-use way.
+""")
+
 
 # Landslide Prediction
 elif page == "Landslide Prediction":
