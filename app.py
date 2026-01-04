@@ -26,7 +26,7 @@ from langchain_core.prompts import ChatPromptTemplate
 # -------------------------------
 # App Configuration
 # -------------------------------
-st.set_page_config(page_title="Landslide Intelligence System", layout="wide")
+st.set_page_config(page_title="Landslide Prediction System", layout="wide")
 load_dotenv()
 
 # -------------------------------
