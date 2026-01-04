@@ -32,27 +32,27 @@ load_dotenv()
 # -------------------------------
 # Sidebar Navigation
 # -------------------------------
-st.sidebar.title("🌍 Navigation")
+st.sidebar.title("Navigation")
 page = st.sidebar.radio(
     "Select Module",
-    ["🏠 Home", "🏔️ Landslide Prediction", "📚 Landslide Knowledge Chatbot"]
+    [" Home", " Landslide Prediction", " Landslide Knowledge Chatbot"]
 )
 
 # =====================================================
 # HOME PAGE
 # =====================================================
-if page == "🏠 Home":
-    st.title("🌍 Landslide Intelligence System")
+if page == "Home":
+    st.title("Landslide Intelligence System")
 
     st.markdown("""
     ### Modules Included
 
-    **🏔️ Landslide Prediction**
+    **Landslide Prediction**
     - Predicts Landslide Type
     - Predicts Fatality Level
     - Predicts Rescue Response Level
 
-    **📚 Landslide Knowledge Chatbot**
+    **Landslide Knowledge Chatbot**
     - Ask questions about landslides
     - Uses real web content (RAG)
     - Powered by Groq LLM
@@ -69,8 +69,8 @@ if page == "🏠 Home":
 # =====================================================
 # LANDSLIDE PREDICTION
 # =====================================================
-elif page == "🏔️ Landslide Prediction":
-    st.title("🏔️ Landslide Impact Prediction")
+elif page == "Landslide Prediction":
+    st.title("Landslide Impact Prediction")
 
     BASE_DIR = Path(__file__).parent
     MODEL_DIR = BASE_DIR / "models_joblib"
@@ -83,7 +83,7 @@ elif page == "🏔️ Landslide Prediction":
         model2 = load_model("fatality_model")
         model3 = load_model("rescue_response_model")
     except Exception as e:
-        st.error("❌ Model files not found")
+        st.error("Model files not found")
         st.exception(e)
         st.stop()
 
@@ -162,7 +162,7 @@ elif page == "🏔️ Landslide Prediction":
 
             df3 = pd.DataFrame([m3])[model3.feature_names_in_]
             rescue = model3.predict(df3)[0]
-            st.info(f"🚑 Rescue Response Level: **{rescue}**")
+            st.info(f"Rescue Response Level: **{rescue}**")
 
     # -------------------------------
     # MANUAL INPUT
@@ -237,12 +237,12 @@ elif page == "🏔️ Landslide Prediction":
 # =====================================================
 # LANDSLIDE KNOWLEDGE CHATBOT (CORRECT & STABLE)
 # =====================================================
-elif page == "📚 Landslide Knowledge Chatbot":
-    st.title("📚 Landslide Knowledge Chatbot")
+elif page == "Landslide Knowledge Chatbot":
+    st.title("Landslide Knowledge Chatbot")
 
     groq_api_key = st.secrets.get("GROQ_API_KEY")
     if not groq_api_key:
-        st.error("❌ GROQ_API_KEY not found in Streamlit secrets!")
+        st.error("GROQ_API_KEY not found in Streamlit secrets!")
         st.stop()
 
     # -------------------------------
@@ -330,7 +330,7 @@ Question: {input}
 
         st.success(response["answer"])
         st.caption(
-            f"⏱️ Response Time: {time.process_time() - start:.2f} seconds"
+            f"Response Time: {time.process_time() - start:.2f} seconds"
         )
 
 
