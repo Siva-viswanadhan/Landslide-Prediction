@@ -28,9 +28,9 @@ page = st.sidebar.radio(
     ["Home", "Landslide Prediction", "Landslide Knowledge Chatbot"]
 )
 
-# =====================================================
+
 # HOME PAGE
-# =====================================================
+
 if page == "Home":
     st.title("Landslide Prediction System")
     st.markdown("""
@@ -47,9 +47,9 @@ if page == "Home":
 - Ollama / HuggingFace embeddings
 """)
 
-# =====================================================
+
 # LANDSLIDE PREDICTION
-# =====================================================
+
 elif page == "Landslide Prediction":
     st.title("Landslide Impact Prediction")
 
@@ -205,9 +205,9 @@ elif page == "Landslide Prediction":
             rescue = model3.predict(df3)[0]
             st.write("Predicted Rescue Response Level:", rescue)
 
-# =====================================================
+
 # LANDSLIDE KNOWLEDGE CHATBOT
-# =====================================================
+
 elif page == "Landslide Knowledge Chatbot":
     st.title("Landslide Knowledge Chatbot")
 
